@@ -1,0 +1,114 @@
+{
+  "endpoints": {
+    "POST /api/trainers/register": {
+      "description": "Registrazione di un nuovo trainer con account utente",
+      "request": {
+        "method": "POST",
+        "url": "http://localhost:8000/api/trainers/register",
+        "headers": { "Content-Type": "application/json" },
+        "body": {
+          "user": {
+            "email": "mario.rossi@example.com",
+            "name": "Mario Rossi",
+            "role": "trainer",
+            "password": "secretpassword"
+          },
+          "bio": "Personal trainer con 10 anni di esperienza in bodybuilding e functional training.",
+          "hourly_rate": 55.0,
+          "location": "Roma",
+          "specialization_ids": [1, 2]
+        }
+      },
+      "response": {
+        "status": 201,
+        "body": {
+          "id": 1,
+          "bio": "Personal trainer con 10 anni di esperienza in bodybuilding e functional training.",
+          "hourly_rate": 55.0,
+          "location": "Roma",
+          "user_id": 1,
+          "specialization_ids": [1, 2],
+          "user": {
+            "id": 1,
+            "email": "mario.rossi@example.com",
+            "name": "Mario Rossi",
+            "role": "trainer"
+          },
+          "specializations": [
+            { "id": 1, "name": "Bodybuilding" },
+            { "id": 2, "name": "Functional Training" }
+          ]
+        }
+      }
+    },
+    "GET /api/trainers/search": {
+      "description": "Ricerca trainer con filtri opzionali",
+      "examples": [
+        {
+          "description": "Cerca trainer a Roma con tariffa massima 60€/h",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:8000/api/trainers/search?location=Roma&max_rate=60"
+          },
+          "response": {
+            "status": 200,
+            "body": [
+              {
+                "id": 1,
+                "bio": "Personal trainer con 10 anni di esperienza.",
+                "hourly_rate": 55.0,
+                "location": "Roma",
+                "user_id": 1,
+                "specialization_ids": [1],
+                "user": {
+                  "id": 1,
+                  "email": "mario.rossi@example.com",
+                  "name": "Mario Rossi",
+                  "role": "trainer"
+                },
+                "specializations": [{ "id": 1, "name": "Bodybuilding" }]
+              }
+            ]
+          }
+        },
+        {
+          "description": "Cerca trainer per specializzazione Yoga",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:8000/api/trainers/search?specialization=Yoga"
+          },
+          "response": {
+            "status": 200,
+            "body": []
+          }
+        }
+      ]
+    },
+    "POST /api/sessions": {
+      "description": "Prenotazione di una sessione di allenamento",
+      "request": {
+        "method": "POST",
+        "url": "http://localhost:8000/api/sessions",
+        "headers": { "Content-Type": "application/json" },
+        "body": {
+          "date": "2026-04-15",
+          "time": "09:00",
+          "status": "pending",
+          "trainer_id": 1,
+          "user_id": 2
+        }
+      },
+      "response": {
+        "status": 201,
+        "body": {
+          "id": 1,
+          "date": "2026-04-15",
+          "time": "09:00",
+          "status": "pending",
+          "trainer_id": 1,
+          "user_id": 2
+        }
+      }
+    }
+  }
+}
