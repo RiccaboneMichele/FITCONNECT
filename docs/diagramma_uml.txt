@@ -1,0 +1,195 @@
+================================================================================
+FitConnect - Diagramma UML (Format: ER Diagram)
+================================================================================
+
+                                ┌─────────────────────........
+                                │     USER
+                                ├─────────────────────
+                                │ *id: INT (PK)
+                                │ *email: VARCHAR(255) (UQ)
+                                │ *name: VARCHAR(100)
+                                │ *role: ENUM(trainer|client)
+                                │ *password_hash: VARCHAR(255)
+                                │ created_at: DATETIME
+                                └─────────────────────
+                                      △          △
+                                      │          │
+                            1 │ N      │          │ 1 │ N
+                              │        │          │   │
+         ┌────────────────────┼───────┐│          │  ┌┴────────────────┐
+         │                    │       ││          │  │                 │
+    ┌──────────────────┐      │     ┌──┴──────────┴──┴───────────────┬─┐
+    │                  │      │     │    TRAINER                      │ │
+    │  SPECIALIZATION  │      │     ├──────────────────────────────────┤ │
+    ├──────────────────┤      │     │ *id: INT (PK)                   │ │
+    │ *id: INT (PK)    │      │     │ *user_id: INT (FK) ─────────────┼─┘
+    │ *name: VARCHAR   │      │     │ bio: TEXT (NULLABLE)           │
+    │  (UNIQUE)        │      │     │ *hourly_rate: FLOAT            │
+    └──────────────────┘      │     │ *location: VARCHAR(100)        │
+         △    │               │     │ created_at: DATETIME           │
+         │    │               │     └──────────────────────────────────┘
+         │    └───────────────┘              │ │
+         │            N:M                    │ │
+         │       ┌─────────────┐             │ │ 1 │ N
+         │       │  JPT TABLE  │             │ │   │
+         │       │ trainer_id  │             │ │   │
+         │       │ special_id  │             │ │   │
+         └───────┤  (both FK)  │             │ │   │
+                 └─────────────┘             │ │   │
+                                            │ │   │
+                              ┌─────────────┴─┴───┴───────────┐
+                              │      SESSION                  │
+                              ├──────────────────────────────┤
+                              │ *id: INT (PK)               │
+                              │ *date: DATE                 │
+                              │ *time: TIME                 │
+                              │ *status: ENUM(scheduled|    │
+                              │           completed|        │
+                              │           cancelled)        │
+                              │ *trainer_id: INT (FK) ─────┐
+                              │ *user_id: INT (FK) ────────┼──────┐
+                              │ created_at: DATETIME       │      │
+                              └──────────────────────────────┘      │
+                                                             User   │
+                                                                    │
+                                                              Trainer
+
+================================================================================
+LEGGENDA
+================================================================================
+
+* = NOT NULL / Required
+FK = Foreign Key (chiave esterna)
+PK = Primary Key (chiave primaria)
+UQ = UNIQUE (univoco)
+N:M = Relazione Many-to-Many
+
+================================================================================
+DETTAGLIO RELAZIONI
+================================================================================
+
+1. USER → TRAINER (1:N)
+   - Un User può essere registrato come 1 Trainer (massimo)
+   - Relazione via TRAINER.user_id (FK) → USER.id (PK)
+   
+   Esempio:
+   User(id=1, email="marco@ex.com", role="trainer") 
+     → Trainer(id=1, user_id=1, location="Milano")
+
+2. USER → SESSION (1:N)
+   - Un User (client) può prenotare N Sessioni
+   - Relazione via SESSION.user_id (FK) → USER.id (PK)
+   
+   Esempio:
+   User(id=3, email="luca@ex.com", role="client")
+     → Session(id=101, user_id=3, trainer_id=1, date="2026-03-15")
+
+3. TRAINER → SESSION (1:N)
+   - Un Trainer può avere N Sessioni prenotate
+   - Relazione via SESSION.trainer_id (FK) → TRAINER.id (PK)
+   
+   Esempio:
+   Trainer(id=1, user_id=1, hourly_rate=50.0)
+     → Session(id=101, trainer_id=1, ...) [sessione 1]
+     → Session(id=102, trainer_id=1, ...) [sessione 2]
+
+4. TRAINER ↔ SPECIALIZATION (N:M)
+   - Un Trainer può avere N Specializzazioni
+   - Una Specializzazione può essere assegnata a N Trainer
+   - Relazione via tabella di associazione (TRAINER_SPECIALIZATION)
+   
+   Esempio:
+   Trainer(id=1) → [Powerlifting, CrossFit]
+   Trainer(id=2) → [Yoga, Pilates]
+   Specialization(id=1, name="Yoga") ← [Trainer(id=2)]
+
+================================================================================
+VINCOLI E VALIDAZIONI
+================================================================================
+
+USER:
+  - email: Univoco, formato email valido
+  - role: Enumerato (trainer | client)
+  - password_hash: Non NULL (sempre presente)
+
+TRAINER:
+  - user_id: Foreign Key, user.role deve essere "trainer"
+  - hourly_rate: > 0
+  - location: Non vuoto, max 100 caratteri
+  - Uno user_id può avere massimo 1 Trainer (UK implicita)
+
+SPECIALIZATION:
+  - name: Univoco, case-insensitive preferred
+
+SESSION:
+  - date: Formato YYYY-MM-DD, futuro
+  - time: Formato HH:MM, 00:00-23:59
+  - status: Una di [scheduled, completed, cancelled]
+  - Unique (date, time, trainer_id) per status != cancelled
+    → Impossibile doppia prenotazione stesso slot
+
+================================================================================
+INDICI CONSIGLIATI (FUTURE IMPLEMENTATION)
+================================================================================
+
+CREATE INDEX idx_user_email ON user(email);
+CREATE INDEX idx_user_role ON user(role);
+CREATE INDEX idx_trainer_user_id ON trainer(user_id);
+CREATE INDEX idx_trainer_location ON trainer(location);
+CREATE INDEX idx_session_trainer_id ON session(trainer_id);
+CREATE INDEX idx_session_user_id ON session(user_id);
+CREATE INDEX idx_session_date_time ON session(date, time);
+CREATE INDEX idx_ts_trainer_id ON trainer_specialization(trainer_id);
+CREATE INDEX idx_ts_spec_id ON trainer_specialization(specialization_id);
+
+================================================================================
+ESEMPI DI QUERY (Logica SQL)
+================================================================================
+
+1. Ricerca Trainer per Location:
+   SELECT t.* FROM trainer t
+   WHERE LOWER(t.location) LIKE '%milano%'
+   ORDER BY t.hourly_rate ASC;
+
+2. Ricerca Trainer per Specializzazione:
+   SELECT DISTINCT t.* FROM trainer t
+   INNER JOIN trainer_specialization ts ON t.id = ts.trainer_id
+   INNER JOIN specialization s ON ts.specialization_id = s.id
+   WHERE LOWER(s.name) = 'yoga'
+   ORDER BY t.hourly_rate ASC;
+
+3. Ricerca Trainer con Filtri Multipli:
+   SELECT t.* FROM trainer t
+   INNER JOIN trainer_specialization ts ON t.id = ts.trainer_id
+   INNER JOIN specialization s ON ts.specialization_id = s.id
+   WHERE LOWER(t.location) LIKE '%roma%'
+     AND t.hourly_rate <= 50.0
+     AND LOWER(s.name) = 'pilates'
+   ORDER BY t.hourly_rate ASC;
+
+4. Verifica Conflitto Orario:
+   SELECT COUNT(*) FROM session
+   WHERE trainer_id = ?
+     AND date = ?
+     AND time = ?
+     AND status != 'cancelled';
+   -- Se COUNT > 0: slot occupato
+
+5. Sessioni di un Trainer:
+   SELECT s.*, u.name as client_name FROM session s
+   INNER JOIN user u ON s.user_id = u.id
+   WHERE s.trainer_id = ?
+     AND s.status = 'scheduled'
+   ORDER BY s.date, s.time;
+
+================================================================================
+NOTE AGGIUNTIVE
+================================================================================
+
+- Questo diagramma rappresenta la struttura LOGICA del database
+- In produzione: potrebbe essere PostgreSQL, MySQL, o altro
+- Gli ID sono auto-incrementanti (AUTO_INCREMENT / SERIAL)
+- I timestamp sono automatici (DEFAULT CURRENT_TIMESTAMP)
+- Soft delete opzionale aggiungendo deleted_at: DATETIME NULL
+
+EOF
