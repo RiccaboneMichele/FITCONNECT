@@ -185,3 +185,5 @@ chmod +x test_backend.sh
 - Il progetto usa sia file nella root sia nella cartella backend; il runtime principale usa backend/main.py.
 - Se cambi schemas o endpoint backend, riavvia sempre il server backend.
 - In caso di problemi DB, usa reset script e riavvia con run.sh.
+
+
