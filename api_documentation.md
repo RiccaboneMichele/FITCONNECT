@@ -1,494 +1,330 @@
-# FitConnect - Documentazione API Dettagliata
+# FitConnect - Documentazione API (Aggiornata)
 
-## 📡 API REST - Versione MVP 1.0
+## Panoramica
+Documentazione pratica degli endpoint attivi nel backend corrente.
 
-Questa documentazione descrive i 3 endpoint principali del Minimum Viable Product di FitConnect.
+- Base URL: `http://localhost:8080`
+- Prefisso API: `/api`
+- Swagger UI: `http://localhost:8080/docs`
+- ReDoc: `http://localhost:8080/redoc`
 
-**Base URL:** `http://localhost:8080/api`
+## Autenticazione
+La maggior parte degli endpoint richiede JWT Bearer token.
 
-**Formato:** JSON
+Header:
+```http
+Authorization: Bearer <access_token>
+```
 
-**Codici HTTP:**
-- `200 OK` - Richiesta riuscita
-- `201 Created` - Risorsa creata con successo
-- `400 Bad Request` - Errore nei parametri della richiesta
-- `404 Not Found` - Risorsa non trovata
-- `409 Conflict` - Conflitto (es. slot già prenotato)
-- `500 Internal Server Error` - Errore del server
+Login usa `multipart/form-data` con `username` (email) e `password`.
+
+## Codici HTTP principali
+- `200 OK`
+- `201 Created`
+- `400 Bad Request`
+- `401 Unauthorized`
+- `403 Forbidden`
+- `404 Not Found`
+- `409 Conflict`
 
 ---
 
-## 📋 Indice Endpoint
+## 1) Endpoints Info
 
-1. [POST /api/trainers/register](#1-post-apitrainersregister) - Registrazione Trainer
-2. [GET /api/trainers/search](#2-get-apitrainerssearch) - Ricerca Trainer
-3. [POST /api/sessions](#3-post-apisessions) - Prenotazione Sessione
+### GET /
+Ritorna informazioni generali del servizio.
+
+### GET /api/health
+Health check applicativo.
 
 ---
 
-## 1. POST /api/trainers/register
+## 2) Auth
 
-### Descrizione
-Registra un nuovo personal trainer nel sistema con informazioni professionali, tariffe e specializzazioni.
+### POST /api/auth/register
+Registra un utente.
 
-### Endpoint
-```
-POST /api/trainers/register
-```
-
-### Headers Richiesti
-```http
-Content-Type: application/json
-```
-
-### Request Body
-
-| Campo | Tipo | Obbligatorio | Descrizione |
-|-------|------|--------------|-------------|
-| `user_id` | integer | ✅ Sì | ID dell'utente già registrato con role='trainer' |
-| `bio` | string | ❌ No | Biografia del trainer (max 500 caratteri) |
-| `hourly_rate` | float | ✅ Sì | Tariffa oraria in euro (deve essere > 0) |
-| `location` | string | ✅ Sì | Città o zona del trainer |
-| `experience_years` | integer | ✅ Sì | Anni di esperienza (>= 0) |
-| `specialization_ids` | array[integer] | ✅ Sì | Array di ID delle specializzazioni |
-
-### Esempio Request
-```http
-POST /api/trainers/register
-Content-Type: application/json
-
+Body (JSON):
+```json
 {
-  "user_id": 5,
-  "bio": "Specializzato in powerlifting e allenamento funzionale. Certificato ISSA e NSCA. Ho preparato atleti per competizioni nazionali.",
-  "hourly_rate": 35.0,
-  "location": "Milano",
-  "experience_years": 8,
-  "specialization_ids": [1, 2]
+  "email": "utente@example.com",
+  "name": "Nome Cognome",
+  "password": "password123",
+  "role": "client"
 }
 ```
 
-### Response Success (201 Created)
+Note:
+- `role` ammessi: `admin`, `trainer`, `client`.
+- Se email esiste gia: `400`.
+
+### POST /api/auth/login
+Login utente.
+
+Body (form-data):
+- `username`: email
+- `password`: password
+
+Response:
 ```json
 {
-  "id": 1,
+  "access_token": "...",
+  "token_type": "bearer",
   "user": {
-    "id": 5,
-    "email": "marco.training@email.com",
-    "name": "Marco Bianchi",
-    "role": "trainer"
-  },
-  "bio": "Specializzato in powerlifting e allenamento funzionale. Certificato ISSA e NSCA. Ho preparato atleti per competizioni nazionali.",
-  "hourly_rate": 35.0,
-  "location": "Milano",
-  "experience_years": 8,
-  "specializations": [
-    {
-      "id": 1,
-      "name": "Powerlifting"
-    },
-    {
-      "id": 2,
-      "name": "Allenamento Funzionale"
-    }
-  ],
-  "created_at": "2026-03-07T14:30:00Z"
-}
-```
-
-### Possibili Errori
-
-#### Errore 400 - User ID non valido
-```json
-{
-  "detail": "User not found or user role is not 'trainer'"
-}
-```
-
-#### Errore 400 - Tariffa non valida
-```json
-{
-  "detail": "hourly_rate must be greater than 0"
-}
-```
-
-#### Errore 409 - Trainer già registrato
-```json
-{
-  "detail": "User is already registered as trainer"
-}
-```
-
-#### Errore 400 - Specializzazione non esistente
-```json
-{
-  "detail": "Specialization with id 99 does not exist"
-}
-```
-
-### Validazioni
-- ✅ `user_id` deve esistere e avere `role='trainer'`
-- ✅ `hourly_rate` deve essere maggiore di 0
-- ✅ `experience_years` deve essere >= 0
-- ✅ Tutti i `specialization_ids` devono esistere nel sistema
-- ✅ Un utente può registrarsi come trainer una sola volta
-
-### Entità Coinvolte
-- `User` (lettura)
-- `Trainer` (creazione)
-- `Specialization` (lettura)
-- `TrainerSpecialization` (creazione relazioni N:M)
-
----
-
-## 2. GET /api/trainers/search
-
-### Descrizione
-Cerca trainer nel sistema applicando filtri opzionali per specializzazione, località e tariffa massima. Tutti i parametri sono opzionali - senza filtri restituisce tutti i trainer disponibili.
-
-### Endpoint
-```
-GET /api/trainers/search
-```
-
-### Query Parameters
-
-| Parametro | Tipo | Obbligatorio | Descrizione |
-|-----------|------|--------------|-------------|
-| `specialization` | string | ❌ No | Nome della specializzazione (es. "powerlifting", "yoga") |
-| `location` | string | ❌ No | Città o zona (ricerca case-insensitive, partial match) |
-| `max_price` | float | ❌ No | Tariffa oraria massima in euro |
-
-### Esempi di Utilizzo
-
-#### Esempio 1: Nessun filtro (tutti i trainer)
-```http
-GET /api/trainers/search
-```
-
-#### Esempio 2: Solo per location
-```http
-GET /api/trainers/search?location=Milano
-```
-
-#### Esempio 3: Specializzazione e tariffa massima
-```http
-GET /api/trainers/search?specialization=powerlifting&max_price=40
-```
-
-#### Esempio 4: Tutti i filtri combinati
-```http
-GET /api/trainers/search?specialization=powerlifting&location=Milano&max_price=40
-```
-
-### Response Success (200 OK)
-```json
-[
-  {
     "id": 1,
-    "name": "Marco Bianchi",
-    "bio": "Specializzato in powerlifting e allenamento funzionale",
-    "hourly_rate": 35.0,
-    "location": "Milano",
-    "experience_years": 8,
-    "specializations": ["Powerlifting", "Allenamento Funzionale"]
-  },
-  {
-    "id": 3,
-    "name": "Giuseppe Verdi",
-    "bio": "Powerlifter agonista con esperienza in preparazione atletica",
-    "hourly_rate": 40.0,
-    "location": "Milano",
-    "experience_years": 12,
-    "specializations": ["Powerlifting", "Preparazione Atletica"]
+    "email": "utente@example.com",
+    "name": "Nome Cognome",
+    "role": "client",
+    "is_active": true,
+    "is_admin": false,
+    "created_at": "2026-03-29T10:00:00Z"
   }
-]
+}
 ```
 
-### Response - Nessun Risultato (200 OK)
-```json
-[]
-```
-
-### Note Importanti
-- I filtri si combinano con logica **AND** (tutti i filtri devono essere soddisfatti)
-- La ricerca per `location` è **case-insensitive** e supporta **partial match**
-  - Es. "Milano" trova anche "Milano Centro", "Milano Sud", ecc.
-- La ricerca per `specialization` è **exact match** (case-insensitive)
-- Se `max_price` è specificato, vengono restituiti solo trainer con `hourly_rate <= max_price`
-- I risultati sono ordinati per `hourly_rate` crescente
-
-### Entità Coinvolte
-- `Trainer` (lettura)
-- `User` (join per ottenere nome)
-- `Specialization` (lettura tramite relazione N:M)
-- `TrainerSpecialization` (join per filtrare)
+### GET /api/auth/me
+Restituisce utente autenticato.
 
 ---
 
-## 3. POST /api/sessions
+## 3) Users (Admin e Self)
 
-### Descrizione
-Permette a un cliente di prenotare una sessione di allenamento one-to-one con un trainer specifico. Il sistema valida automaticamente la disponibilità del trainer nello slot selezionato.
+### GET /api/users
+Solo admin. Lista utenti con filtri opzionali:
+- `skip`, `limit`, `role`
 
-### Endpoint
-```
-POST /api/sessions
-```
+### POST /api/users
+Solo admin. Crea utente.
 
-### Headers Richiesti
-```http
-Content-Type: application/json
-```
+### GET /api/users/{user_id}
+Admin oppure utente proprietario.
 
-### Request Body
+### PUT /api/users/{user_id}
+Admin oppure utente proprietario.
 
-| Campo | Tipo | Obbligatorio | Descrizione |
-|-------|------|--------------|-------------|
-| `client_id` | integer | ✅ Sì | ID del cliente che prenota |
-| `trainer_id` | integer | ✅ Sì | ID del trainer con cui prenotare |
-| `date` | string | ✅ Sì | Data della sessione (formato: YYYY-MM-DD) |
-| `time` | string | ✅ Sì | Ora di inizio (formato: HH:MM, es. "10:00") |
-| `notes` | string | ❌ No | Note aggiuntive per il trainer (max 1000 caratteri) |
+### PATCH /api/users/{user_id}/status
+Solo admin. Attiva/disattiva utente.
 
-### Esempio Request
-```http
-POST /api/sessions
-Content-Type: application/json
-
-{
-  "client_id": 10,
-  "trainer_id": 1,
-  "date": "2026-07-15",
-  "time": "10:00",
-  "notes": "Prima sessione, focus su tecnica di base per squat e deadlift"
-}
-```
-
-### Response Success (201 Created)
+Body:
 ```json
-{
-  "id": 123,
-  "client": {
-    "id": 10,
-    "name": "Luca Rossi",
-    "fitness_level": "beginner"
-  },
-  "trainer": {
-    "id": 1,
-    "name": "Marco Bianchi",
-    "location": "Milano",
-    "hourly_rate": 35.0
-  },
-  "date": "2026-07-15",
-  "time": "10:00",
-  "status": "scheduled",
-  "notes": "Prima sessione, focus su tecnica di base per squat e deadlift",
-  "created_at": "2026-03-07T15:45:00Z",
-  "message": "Sessione prenotata con successo"
-}
+{ "is_active": true }
 ```
 
-### Possibili Errori
-
-#### Errore 404 - Cliente non trovato
-```json
-{
-  "detail": "Client with id 10 does not exist"
-}
-```
-
-#### Errore 404 - Trainer non trovato
-```json
-{
-  "detail": "Trainer with id 1 does not exist"
-}
-```
-
-#### Errore 400 - Data non valida
-```json
-{
-  "detail": "Date must be in the future (format: YYYY-MM-DD)"
-}
-```
-
-#### Errore 400 - Ora non valida
-```json
-{
-  "detail": "Time must be in format HH:MM (00:00 to 23:59)"
-}
-```
-
-#### Errore 409 - Slot già occupato
-```json
-{
-  "detail": "This time slot is already booked for this trainer. Please choose a different time."
-}
-```
-
-### Validazioni
-- ✅ `client_id` deve esistere nella tabella `client`
-- ✅ `trainer_id` deve esistere nella tabella `trainer`
-- ✅ `date` deve essere nel futuro (>= data odierna)
-- ✅ `time` deve essere in formato HH:MM valido
-- ✅ Lo slot (trainer + date + time) non deve essere già occupato
-- ✅ Viene applicato il vincolo UNIQUE(trainer_id, date, time) per status != 'cancelled'
-
-### Logica di Business
-
-#### Verifica Conflitto
-Prima di creare la sessione, il sistema esegue:
-```sql
-SELECT COUNT(*) FROM session
-WHERE trainer_id = ? 
-  AND date = ? 
-  AND time = ? 
-  AND status != 'cancelled'
-```
-Se COUNT > 0, restituisce errore 409.
-
-#### Status della Sessione
-Le sessioni vengono create con:
-- **status = 'scheduled'** (predefinito alla creazione)
-
-Gli status possibili sono:
-- `scheduled` - Sessione confermata e programmata
-- `completed` - Sessione completata
-- `cancelled` - Sessione cancellata
-
-### Entità Coinvolte
-- `Session` (creazione) - **Relazione N:1 con Client e Trainer**
-- `Client` (lettura)
-- `Trainer` (lettura)
-- `User` (join per nomi)
+### DELETE /api/users/{user_id}
+Solo admin. Elimina utente.
 
 ---
 
-## 🔐 Autenticazione (Future Implementation)
+## 4) Clients
 
-Nelle versioni future, tutti gli endpoint richiederanno autenticazione tramite JWT token:
+### GET /api/clients
+Admin o trainer. Lista clienti.
 
-```http
-Authorization: Bearer <jwt_token>
+### GET /api/clients/{client_id}
+Admin o proprietario del profilo client.
+
+### GET /api/clients/profile/me
+Profilo client dell'utente autenticato.
+
+### POST /api/clients
+Crea profilo client per utente autenticato (role client o admin).
+
+Body tipico:
+```json
+{
+  "user_id": 10,
+  "phone": "+39 333 0000000",
+  "birth_date": "1995-04-10",
+  "fitness_level": "beginner",
+  "address": "Torino",
+  "notes": "Allenamento 3 volte a settimana"
+}
 ```
 
-Per ora, nel MVP, gli endpoint sono pubblici per semplificare i test.
+Nota: `user_id` viene forzato lato server all'utente autenticato.
+
+### PUT /api/clients/{client_id}
+Aggiorna profilo client (admin o proprietario).
 
 ---
 
-## 📊 Codici di Risposta HTTP
+## 5) Trainers
 
-| Codice | Nome | Quando viene usato |
-|--------|------|-------------------|
-| 200 | OK | Operazione riuscita (GET, PATCH, DELETE) |
-| 201 | Created | Risorsa creata con successo (POST) |
-| 400 | Bad Request | Parametri mancanti o non validi |
-| 404 | Not Found | Risorsa non trovata |
-| 409 | Conflict | Conflitto (es. doppia prenotazione) |
-| 500 | Internal Server Error | Errore imprevisto del server |
+### GET /api/trainers
+Pubblico. Ricerca/lista trainer.
+
+Query params opzionali:
+- `location`
+- `specialization`
+- `max_price`
+- `skip`, `limit`
+
+### GET /api/trainers/{trainer_id}
+Pubblico. Dettaglio trainer.
+
+### GET /api/trainers/profile/me
+Profilo trainer dell'utente autenticato.
+
+### POST /api/trainers
+Crea profilo trainer (role trainer o admin).
+
+### PUT /api/trainers/{trainer_id}
+Aggiorna profilo trainer (admin o proprietario).
+
+### GET /api/trainers/{trainer_id}/chat
+Messaggi chat trainer-client.
+
+Regole:
+- `client`: legge la chat col trainer usando il proprio client profile.
+- `trainer/admin`: deve passare `client_id`.
+
+Query params:
+- `client_id` (richiesto per trainer/admin)
+- `limit` (default 100)
+
+### POST /api/trainers/{trainer_id}/chat
+Invio messaggio trainer-client.
+
+Body:
+```json
+{
+  "message": "Ciao!",
+  "client_id": 1
+}
+```
+
+`client_id` per `client` viene risolto automaticamente dal backend.
+
+### GET /api/trainers/me/chats
+Solo trainer/admin. Lista conversazioni private del trainer autenticato.
+
+### GET /api/trainers/me/chats/{client_id}
+Solo trainer/admin. Messaggi privati con cliente specifico.
+
+### POST /api/trainers/me/chats/{client_id}
+Solo trainer/admin. Invia messaggio privato al cliente.
 
 ---
 
-## 🧪 Testing degli Endpoint
+## 6) Sessions
 
-### Usando cURL
+### GET /api/sessions
+Lista sessioni visibili all'utente autenticato.
 
-#### Registrazione Trainer
+Filtri opzionali:
+- `client_id`, `trainer_id` (limitati dal ruolo)
+- `status`
+- `date_from`, `date_to`
+- `skip`, `limit`
+
+### GET /api/sessions/{session_id}
+Dettaglio sessione (admin o partecipanti della sessione).
+
+### POST /api/sessions
+Crea prenotazione sessione.
+
+Body:
+```json
+{
+  "client_id": 1,
+  "trainer_id": 2,
+  "date": "2026-04-02",
+  "time": "18:30",
+  "notes": "Prima valutazione"
+}
+```
+
+Regole:
+- Se role `client`, puo prenotare solo per il proprio `client_id`.
+- Se slot trainer gia occupato, ritorna `409`.
+
+### PUT /api/sessions/{session_id}
+Aggiorna sessione (solo trainer della sessione o admin).
+
+### DELETE /api/sessions/{session_id}
+Annulla sessione (partecipanti o admin).
+
+---
+
+## 7) Specializations
+
+### GET /api/specializations
+Pubblico. Lista specializzazioni.
+
+### POST /api/specializations
+Solo admin. Crea specializzazione.
+
+---
+
+## 8) Contacts
+
+### POST /api/contacts
+Pubblico. Invio messaggio contatto.
+
+Body:
+```json
+{
+  "name": "Mario",
+  "email": "mario@example.com",
+  "phone": "+39 333 0000000",
+  "subject": "Info abbonamento",
+  "message": "Vorrei maggiori dettagli"
+}
+```
+
+---
+
+## 9) Admin
+
+### GET /api/admin/dashboard
+Solo admin. Statistiche piattaforma.
+
+### GET /api/admin/contacts
+Admin con permesso `manage_users`.
+
+Filtri:
+- `is_read`
+- `skip`, `limit`
+
+### PUT /api/admin/contacts/{contact_id}/read
+Solo admin. Segna contatto come letto.
+
+### GET /api/admin/groups
+Solo admin. Lista gruppi e permessi.
+
+---
+
+## Esempi rapidi cURL
+
+### Login
 ```bash
-curl -X POST http://localhost:8080/api/trainers/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "user_id": 5,
-    "bio": "Trainer professionista",
-    "hourly_rate": 35.0,
-    "location": "Milano",
-    "experience_years": 8,
-    "specialization_ids": [1, 2]
-  }'
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: multipart/form-data" \
+  -F "username=admin@fitconnect.com" \
+  -F "password=admin123"
 ```
 
-#### Ricerca Trainer
+### Ricerca trainer
 ```bash
-curl "http://localhost:8080/api/trainers/search?location=Milano&max_price=40"
+curl "http://localhost:8080/api/trainers?location=Torino&max_price=45"
 ```
 
-#### Prenotazione Sessione
+### Prenotazione sessione
 ```bash
 curl -X POST http://localhost:8080/api/sessions \
+  -H "Authorization: Bearer <TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{
-    "client_id": 10,
-    "trainer_id": 1,
-    "date": "2026-07-15",
-    "time": "10:00",
-    "notes": "Prima sessione"
+    "client_id": 1,
+    "trainer_id": 2,
+    "date": "2026-04-10",
+    "time": "17:30",
+    "notes": "Sessione prova"
   }'
 ```
 
-### Usando Swagger UI
-
-Apri il browser su:
-```
-http://localhost:8080/docs
-```
-
-Qui potrai:
-- Vedere tutti gli endpoint disponibili
-- Testare le API interattivamente
-- Vedere gli schemi JSON di richiesta/risposta
-- Visualizzare i codici di errore
-
 ---
 
-## 📝 Note Implementative
-
-### Gestione Date e Orari
-- Tutte le date sono in formato **ISO 8601**: `YYYY-MM-DD`
-- Gli orari sono in formato **24h**: `HH:MM`
-- I timestamp completi includono timezone: `2026-03-07T15:45:00Z`
-
-### Validazione Lato Server
-Tutte le validazioni vengono eseguite lato server:
-- Controllo esistenza foreign keys
-- Validazione formati (date, email, ecc.)
-- Business logic (conflitti, duplicati, ecc.)
-
-### Performance
-- Le query di ricerca trainer utilizzano indici su:
-  - `trainer.location`
-  - `trainer.hourly_rate`
-  - `specialization.name`
-- 
-
-Le query di verifica conflitti utilizzano:
-  - Indice composito su `(trainer_id, date, time)`
-
----
-
-## 🔮 Endpoint Futuri (Post-MVP)
-
-### Versione 2.0 - Pianificata Q2 2026
-
-```
-GET    /api/trainers/{id}             - Dettaglio singolo trainer
-PATCH  /api/sessions/{id}             - Modifica/cancella sessione
-GET    /api/sessions?client_id={id}   - Sessioni di un cliente
-GET    /api/sessions?trainer_id={id}  - Sessioni di un trainer
-POST   /api/reviews                   - Lascia recensione
-GET    /api/trainers/{id}/reviews     - Recensioni di un trainer
-POST   /api/auth/login                - Login con JWT
-POST   /api/auth/register             - Registrazione completa
-```
-
----
-
-## 📚 Risorse Aggiuntive
-
-- **Schema Database:** Vedi `diagramma_uml_completo.txt`
-- **Esempi JSON:** Vedi `examples_api.json`
-- **Analisi Completa:** Vedi `compito1_analisi.md`
-
----
-
-**Versione Documento:** 1.0  
-**Ultima Modifica:** 7 Marzo 2026  
-**Autore:** FitConnect Development Team
+## Note finali
+- Questa documentazione riflette l'implementazione attuale in `backend/main.py`.
+- Per schema request/response completo e sempre aggiornato, usare `http://localhost:8080/docs`.
