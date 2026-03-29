@@ -1,0 +1,390 @@
+================================================================================
+FITCONNECT - DIAGRAMMA UML COMPLETO
+Versione con entità Client separata e relazione N:1
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                            SCHEMA ENTITÀ                                │
+└─────────────────────────────────────────────────────────────────────────┘
+
+
+                            ┌──────────────────┐
+                            │       USER       │
+                            ├──────────────────┤
+                            │ *id (PK)         │
+                            │ *email (UQ)      │
+                            │ *password_hash   │
+                            │ *name            │
+                            │ *role (ENUM)     │
+                            │  created_at      │
+                            └──────────────────┘
+                                    △
+                                    │
+                         ┌──────────┴──────────┐
+                         │ 1:1                 │ 1:1
+                         │                     │
+                ┌────────▼─────────┐  ┌────────▼─────────┐
+                │     CLIENT       │  │     TRAINER      │
+                ├──────────────────┤  ├──────────────────┤
+                │ *id (PK)         │  │ *id (PK)         │
+                │ *user_id (FK)────┼──┤ *user_id (FK)────┤
+                │  phone           │  │  bio             │
+                │  birth_date      │  │ *hourly_rate     │
+                │ *fitness_level   │  │ *location        │
+                │  created_at      │  │ *experience_years│
+                └──────────────────┘  │  created_at      │
+                         │            └──────────────────┘
+                         │                     │
+                         │ 1                   │ 1
+                         │                     │
+                         │ N                   │ N
+                         │                     │
+                    ┌────▼─────────────────────▼────┐
+                    │         SESSION              │
+                    ├──────────────────────────────┤
+                    │ *id (PK)                     │
+                    │ *client_id (FK) ─────────────┼──┐ N:1 → CLIENT
+                    │ *trainer_id (FK) ────────────┼──┘ N:1 → TRAINER
+                    │ *date (DATE)                 │
+                    │ *time (TIME)                 │
+                    │ *status (ENUM)               │
+                    │  notes (TEXT)                │
+                    │  created_at (DATETIME)       │
+                    └──────────────────────────────┘
+
+
+                    ┌──────────────────────────────┐
+                    │      SPECIALIZATION          │
+                    ├──────────────────────────────┤
+                    │ *id (PK)                     │
+                    │ *name (VARCHAR, UQ)          │
+                    │  description (TEXT)          │
+                    └──────────────────────────────┘
+                                △
+                                │
+                         N:M Relationship
+                                │
+                    ┌───────────▼──────────┐
+                    │ TRAINER_SPECIALIZATION│
+                    │   (Tabella Ponte)     │
+                    ├───────────────────────┤
+                    │ *trainer_id (FK)      │
+                    │ *specialization_id(FK)│
+                    └───────────────────────┘
+                                │
+                                │
+                        ┌───────▼────────┐
+                        │    TRAINER     │
+                        └────────────────┘
+
+================================================================================
+DETTAGLIO ENTITÀ
+================================================================================
+
+1. USER (Autenticazione)
+   ─────────────────────
+   Campi:
+   • id               : INTEGER, PRIMARY KEY, AUTO_INCREMENT
+   • email            : VARCHAR(255), UNIQUE, NOT NULL
+   • password_hash    : VARCHAR(255), NOT NULL
+   • name             : VARCHAR(100), NOT NULL
+   • role             : ENUM('client', 'trainer'), NOT NULL
+   • created_at       : DATETIME, DEFAULT CURRENT_TIMESTAMP
+
+   Descrizione:
+   Entità per l'autenticazione degli utenti. Ogni utente può essere
+   un cliente o un trainer (ruolo distinto).
+
+   Relazioni:
+   - 1:1 con CLIENT (se role = 'client')
+   - 1:1 con TRAINER (se role = 'trainer')
+
+   Indici:
+   - PRIMARY KEY (id)
+   - UNIQUE INDEX (email)
+   - INDEX (role)
+
+
+2. CLIENT
+   ───────
+   Campi:
+   • id               : INTEGER, PRIMARY KEY, AUTO_INCREMENT
+   • user_id          : INTEGER, FOREIGN KEY → user.id, NOT NULL, UNIQUE
+   • phone            : VARCHAR(20), NULLABLE
+   • birth_date       : DATE, NULLABLE
+   • fitness_level    : ENUM('beginner', 'intermediate', 'advanced'), NOT NULL
+   • created_at       : DATETIME, DEFAULT CURRENT_TIMESTAMP
+
+   Descrizione:
+   Profilo specifico per i clienti che cercano personal trainer.
+   Contiene informazioni aggiuntive rispetto a User.
+
+   Relazioni:
+   - 1:1 con USER (user_id → user.id)
+   - 1:N con SESSION (un cliente può avere molte sessioni)
+
+   Vincoli:
+   - user_id deve riferirsi a un User con role='client'
+   - UNIQUE(user_id) - un utente può avere un solo profilo cliente
+
+   Indici:
+   - PRIMARY KEY (id)
+   - UNIQUE INDEX (user_id)
+   - INDEX (fitness_level)
+
+
+3. TRAINER
+   ────────
+   Campi:
+   • id               : INTEGER, PRIMARY KEY, AUTO_INCREMENT
+   • user_id          : INTEGER, FOREIGN KEY → user.id, NOT NULL, UNIQUE
+   • bio              : TEXT, NULLABLE
+   • hourly_rate      : DECIMAL(10,2), NOT NULL, CHECK (hourly_rate > 0)
+   • location         : VARCHAR(100), NOT NULL
+   • experience_years : INTEGER, NOT NULL, CHECK (experience_years >= 0)
+   • created_at       : DATETIME, DEFAULT CURRENT_TIMESTAMP
+
+   Descrizione:
+   Profilo specifico per i personal trainer. Contiene informazioni
+   professionali e tariffe.
+
+   Relazioni:
+   - 1:1 con USER (user_id → user.id)
+   - 1:N con SESSION (un trainer può tenere molte sessioni)
+   - N:M con SPECIALIZATION (tramite tabella ponte)
+
+   Vincoli:
+   - user_id deve riferirsi a un User con role='trainer'
+   - UNIQUE(user_id) - un utente può avere un solo profilo trainer
+   - hourly_rate > 0
+   - experience_years >= 0
+
+   Indici:
+   - PRIMARY KEY (id)
+   - UNIQUE INDEX (user_id)
+   - INDEX (location)
+   - INDEX (hourly_rate)
+
+
+4. SESSION (⭐ CONTIENE LE RELAZIONI N:1 RICHIESTE)
+   ────────
+   Campi:
+   • id               : INTEGER, PRIMARY KEY, AUTO_INCREMENT
+   • client_id        : INTEGER, FOREIGN KEY → client.id, NOT NULL
+   • trainer_id       : INTEGER, FOREIGN KEY → trainer.id, NOT NULL
+   • date             : DATE, NOT NULL
+   • time             : TIME, NOT NULL
+   • status           : ENUM('scheduled', 'completed', 'cancelled'), NOT NULL
+   • notes            : TEXT, NULLABLE
+   • created_at       : DATETIME, DEFAULT CURRENT_TIMESTAMP
+
+   Descrizione:
+   Rappresenta una sessione di allenamento prenotata.
+   
+   ⭐ RELAZIONI N:1 (Molti a Uno):
+   - N sessioni → 1 CLIENT (molte sessioni appartengono a un cliente)
+   - N sessioni → 1 TRAINER (molte sessioni appartengono a un trainer)
+
+   Questo significa:
+   - Un cliente può avere MOLTE sessioni (visto da CLIENT: 1:N)
+   - Ogni sessione appartiene a UN SOLO cliente (visto da SESSION: N:1) ✅
+   - Un trainer può tenere MOLTE sessioni (visto da TRAINER: 1:N)
+   - Ogni sessione appartiene a UN SOLO trainer (visto da SESSION: N:1) ✅
+
+   Vincoli:
+   - client_id deve esistere in client.id
+   - trainer_id deve esistere in trainer.id
+   - date >= CURRENT_DATE (solo date future o oggi)
+   - UNIQUE(trainer_id, date, time) WHERE status != 'cancelled'
+     → Impedisce doppia prenotazione dello stesso slot orario
+
+   Indici:
+   - PRIMARY KEY (id)
+   - INDEX (client_id)
+   - INDEX (trainer_id)
+   - INDEX (date)
+   - INDEX (status)
+   - UNIQUE INDEX (trainer_id, date, time) WHERE status != 'cancelled'
+
+
+5. SPECIALIZATION
+   ───────────────
+   Campi:
+   • id               : INTEGER, PRIMARY KEY, AUTO_INCREMENT
+   • name             : VARCHAR(100), UNIQUE, NOT NULL
+   • description      : TEXT, NULLABLE
+
+   Descrizione:
+   Specializzazioni disponibili per i trainer (es. Powerlifting, Yoga,
+   CrossFit, Functional Training, ecc.).
+
+   Relazioni:
+   - N:M con TRAINER (tramite trainer_specialization)
+
+   Vincoli:
+   - UNIQUE(name) - ogni specializzazione ha un nome univoco
+
+   Indici:
+   - PRIMARY KEY (id)
+   - UNIQUE INDEX (name)
+
+
+6. TRAINER_SPECIALIZATION (Tabella Ponte per N:M)
+   ───────────────────────
+   Campi:
+   • trainer_id       : INTEGER, FOREIGN KEY → trainer.id, NOT NULL
+   • specialization_id: INTEGER, FOREIGN KEY → specialization.id, NOT NULL
+
+   Descrizione:
+   Tabella di associazione per la relazione molti-a-molti tra
+   Trainer e Specialization.
+
+   Vincoli:
+   - PRIMARY KEY (trainer_id, specialization_id)
+   - trainer_id deve esistere in trainer.id
+   - specialization_id deve esistere in specialization.id
+
+   Indici:
+   - PRIMARY KEY (trainer_id, specialization_id)
+   - INDEX (specialization_id)
+
+
+================================================================================
+RIEPILOGO RELAZIONI
+================================================================================
+
+┌────────────────────┬──────┬────────────────────────────────────────┐
+│ Da                 │ Tipo │ A / Descrizione                        │
+├────────────────────┼──────┼────────────────────────────────────────┤
+│ USER               │ 1:1  │ CLIENT (se role='client')              │
+│ USER               │ 1:1  │ TRAINER (se role='trainer')            │
+│ CLIENT             │ 1:N  │ SESSION (vista da Client: ha molte)    │
+│ ⭐ SESSION        │ N:1  │ CLIENT (vista da Session: uno solo) ✅ │
+│ TRAINER            │ 1:N  │ SESSION (vista da Trainer: ha molte)   │
+│ ⭐ SESSION        │ N:1  │ TRAINER (vista da Session: uno solo) ✅│
+│ TRAINER            │ N:M  │ SPECIALIZATION (via tabella ponte)     │
+│ SPECIALIZATION     │ N:M  │ TRAINER (via tabella ponte)            │
+└────────────────────┴──────┴────────────────────────────────────────┘
+
+⭐ = Relazioni N:1 richieste dalle specifiche
+
+
+================================================================================
+ENUMERAZIONI
+================================================================================
+
+UserRole:
+   - 'client'     : Cliente che cerca trainer
+   - 'trainer'    : Personal trainer professionista
+
+FitnessLevel:
+   - 'beginner'   : Principiante (poco o nessun allenamento)
+   - 'intermediate': Intermedio (allenamento regolare)
+   - 'advanced'   : Avanzato (allenamento intensivo/agonistico)
+
+SessionStatus:
+   - 'scheduled'  : Sessione programmata (confermata)
+   - 'completed'  : Sessione completata
+   - 'cancelled'  : Sessione cancellata
+
+
+================================================================================
+VINCOLI DI INTEGRITÀ REFERENZIALE
+================================================================================
+
+1. ON DELETE per Foreign Keys:
+
+   client.user_id → user.id:
+      ON DELETE CASCADE (se utente eliminato, elimina profilo cliente)
+
+   trainer.user_id → user.id:
+      ON DELETE CASCADE (se utente eliminato, elimina profilo trainer)
+
+   session.client_id → client.id:
+      ON DELETE CASCADE (se cliente eliminato, elimina sue sessioni)
+
+   session.trainer_id → trainer.id:
+      ON DELETE CASCADE (se trainer eliminato, elimina sue sessioni)
+
+   trainer_specialization.trainer_id → trainer.id:
+      ON DELETE CASCADE
+
+   trainer_specialization.specialization_id → specialization.id:
+      ON DELETE RESTRICT (non permette eliminazione specializzazione se in uso)
+
+
+================================================================================
+ESEMPI DI QUERY SQL
+================================================================================
+
+1. Ricerca trainer per specializzazione e location:
+
+   SELECT DISTINCT t.*, u.name, u.email
+   FROM trainer t
+   INNER JOIN user u ON t.user_id = u.id
+   INNER JOIN trainer_specialization ts ON t.id = ts.trainer_id
+   INNER JOIN specialization s ON ts.specialization_id = s.id
+   WHERE LOWER(s.name) = LOWER('powerlifting')
+     AND LOWER(t.location) LIKE '%milano%'
+     AND t.hourly_rate <= 40.0
+   ORDER BY t.hourly_rate ASC;
+
+
+2. Verifica conflitto prenotazione:
+
+   SELECT COUNT(*) as conflicts
+   FROM session
+   WHERE trainer_id = ?
+     AND date = ?
+     AND time = ?
+     AND status != 'cancelled';
+   -- Se conflicts > 0: slot occupato
+
+
+3. Sessioni di un cliente:
+
+   SELECT s.*, 
+          u_trainer.name as trainer_name,
+          t.hourly_rate
+   FROM session s
+   INNER JOIN client c ON s.client_id = c.id
+   INNER JOIN trainer t ON s.trainer_id = t.id
+   INNER JOIN user u_trainer ON t.user_id = u_trainer.id
+   WHERE s.client_id = ?
+     AND s.status = 'scheduled'
+   ORDER BY s.date, s.time;
+
+
+4. Statistiche trainer (sessioni completate):
+
+   SELECT t.id, 
+          u.name,
+          COUNT(s.id) as total_sessions,
+          SUM(t.hourly_rate) as total_revenue
+   FROM trainer t
+   INNER JOIN user u ON t.user_id = u.id
+   LEFT JOIN session s ON t.id = s.trainer_id AND s.status = 'completed'
+   GROUP BY t.id, u.name
+   ORDER BY total_sessions DESC;
+
+
+================================================================================
+NOTE FINALI
+================================================================================
+
+Questo diagramma UML rappresenta la struttura LOGICA del database per
+FitConnect con le seguenti caratteristiche chiave:
+
+✅ 5 entità principali (User, Client, Trainer, Session, Specialization)
+✅ 1 tabella ponte (TrainerSpecialization) per relazione N:M
+✅ Relazioni N:1 RICHIESTE implementate in Session:
+   - Session N:1 Client (molte sessioni per un cliente)
+   - Session N:1 Trainer (molte sessioni per un trainer)
+✅ Relazione N:M tra Trainer e Specialization
+✅ Vincoli di integrità referenziale
+✅ Enumerazioni per campi con valori predefiniti
+✅ Indici per performance delle query
+
+Database consigliato: PostgreSQL 14+ o MySQL 8+
+
+EOF

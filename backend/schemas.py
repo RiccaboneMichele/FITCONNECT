@@ -5,7 +5,7 @@ Compito 1B: Definizione completa di tutti i modelli dati
 
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, date as DateType, time as TimeType
 from enum import Enum
 
 
@@ -42,7 +42,7 @@ class UserBase(BaseModel):
     """Campi comuni nel modello User"""
     email: EmailStr = Field(..., description="Email unica dell'utente")
     name: str = Field(..., min_length=1, max_length=100, description="Nome completo")
-    role: UserRole = Field(..., description="Ruolo: trainer o client")
+    role: UserRole = Field(..., description="Ruolo: admin, trainer o client")
 
 
 class UserCreate(UserBase):
@@ -53,10 +53,17 @@ class UserCreate(UserBase):
 class UserRead(UserBase):
     """Schema per lettura utente (esclude password)"""
     id: int = Field(..., description="ID univoco utente")
+    is_active: bool = Field(..., description="Utente attivo")
+    is_admin: bool = Field(..., description="Flag amministratore")
     created_at: datetime = Field(..., description="Data/ora creazione")
 
     class Config:
         from_attributes = True
+
+
+class UserStatusUpdate(BaseModel):
+    """Schema per attivazione/disattivazione utente"""
+    is_active: bool = Field(..., description="Stato attivo utente")
 
 
 # ============================================================================
@@ -93,6 +100,8 @@ class ClientRead(ClientBase):
 class SpecializationBase(BaseModel):
     """Campi comuni nel modello Specialization"""
     name: str = Field(..., min_length=1, max_length=50, description="Nome specializzazione")
+    description: Optional[str] = Field(None, max_length=255, description="Descrizione breve")
+    icon: Optional[str] = Field(None, max_length=50, description="Icona opzionale")
 
 
 class SpecializationCreate(SpecializationBase):
@@ -119,6 +128,9 @@ class TrainerBase(BaseModel):
     hourly_rate: float = Field(..., gt=0, description="Tariffa oraria (> 0)")
     location: str = Field(..., min_length=1, max_length=100, description="Città/location")
     experience_years: int = Field(..., ge=0, description="Anni di esperienza (>= 0)")
+    languages: Optional[str] = Field(None, description="Lingue parlate (es: Italiano,Inglese,Spagnolo)")
+    session_types: Optional[str] = Field(None, description="Tipo sessioni (es: online,in_person)")
+    lesson_types: Optional[str] = Field(None, description="Lezioni offerte (es: Cardio,Forza,Stretching)")
 
 
 class TrainerCreate(TrainerBase):
@@ -145,6 +157,9 @@ class TrainerSearchResponse(BaseModel):
     hourly_rate: float = Field(..., description="Tariffa oraria")
     experience_years: int = Field(..., description="Anni di esperienza")
     bio: Optional[str] = Field(None, description="Biografia")
+    languages: Optional[str] = Field(None, description="Lingue parlate")
+    session_types: Optional[str] = Field(None, description="Tipo sessioni")
+    lesson_types: Optional[str] = Field(None, description="Lezioni offerte")
     specializations: List[str] = Field(default_factory=list, description="Nomi specializzazioni")
 
     class Config:
@@ -162,8 +177,8 @@ class SessionBase(BaseModel):
     - Molte sessioni (N) appartengono a UN cliente (1)
     - Molte sessioni (N) appartengono a UN trainer (1)
     """
-    date: str = Field(..., description="Data sessione (formato YYYY-MM-DD)")
-    time: str = Field(..., description="Ora sessione (formato HH:MM)")
+    date: DateType = Field(..., description="Data sessione")
+    time: TimeType = Field(..., description="Ora sessione")
     status: SessionStatus = Field(default=SessionStatus.SCHEDULED, description="Stato sessione")
     trainer_id: int = Field(..., description="ID trainer (relazione N:1)")
     client_id: int = Field(..., description="ID client che prenota (relazione N:1)")
@@ -277,3 +292,35 @@ class GroupRead(GroupBase):
     class Config:
         from_attributes = True
 
+
+# ============================================================================
+# CHAT MODELS
+# ============================================================================
+
+class ChatMessageCreate(BaseModel):
+    """Schema invio messaggio chat"""
+    message: str = Field(..., min_length=1, max_length=2000, description="Testo del messaggio")
+    client_id: Optional[int] = Field(None, description="ID client (richiesto per trainer/admin)")
+
+
+class ChatMessageRead(BaseModel):
+    """Schema lettura messaggio chat"""
+    id: int
+    trainer_id: int
+    client_id: int
+    sender_user_id: int
+    message: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class TrainerChatConversationRead(BaseModel):
+    """Riepilogo conversazione privata trainer <-> client"""
+    client_id: int
+    client_user_id: int
+    client_name: str
+    last_message: str
+    last_message_at: datetime
+    total_messages: int

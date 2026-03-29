@@ -1,0 +1,358 @@
+{
+  "api_version": "1.0.0",
+  "base_url": "http://localhost:8080",
+  "description": "FitConnect API - 3 Esempi JSON per gli endpoint MVP",
+  "note": "Questi JSON sono sintatticamente validi e pronti per essere usati con le API",
+
+  "endpoint_examples": {
+    
+    "1_trainer_registration": {
+      "name": "Registrazione Personal Trainer",
+      "endpoint": "POST /api/trainers/register",
+      "description": "Registra un nuovo trainer nel sistema con bio, tariffe e specializzazioni",
+      
+      "request": {
+        "method": "POST",
+        "url": "http://localhost:8080/api/trainers/register",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user_id": 5,
+          "bio": "Specializzato in powerlifting e allenamento funzionale. Certificato ISSA e NSCA. Ho preparato atleti per competizioni nazionali di powerlifting e aiutato oltre 100 clienti a raggiungere i loro obiettivi fitness.",
+          "hourly_rate": 35.0,
+          "location": "Milano",
+          "experience_years": 8,
+          "specialization_ids": [1, 2]
+        }
+      },
+      
+      "response": {
+        "status_code": 201,
+        "status_text": "Created",
+        "body": {
+          "id": 1,
+          "user": {
+            "id": 5,
+            "email": "marco.training@email.com",
+            "name": "Marco Bianchi",
+            "role": "trainer"
+          },
+          "bio": "Specializzato in powerlifting e allenamento funzionale. Certificato ISSA e NSCA. Ho preparato atleti per competizioni nazionali di powerlifting e aiutato oltre 100 clienti a raggiungere i loro obiettivi fitness.",
+          "hourly_rate": 35.0,
+          "location": "Milano",
+          "experience_years": 8,
+          "specializations": [
+            {
+              "id": 1,
+              "name": "Powerlifting"
+            },
+            {
+              "id": 2,
+              "name": "Allenamento Funzionale"
+            }
+          ],
+          "created_at": "2026-03-07T14:30:00Z"
+        }
+      },
+      
+      "validations": [
+        "user_id deve esistere e avere role='trainer'",
+        "hourly_rate deve essere maggiore di 0",
+        "experience_years deve essere >= 0",
+        "Tutti gli specialization_ids devono esistere nel sistema",
+        "Un utente può registrarsi come trainer una sola volta"
+      ],
+      
+      "error_example": {
+        "status_code": 409,
+        "status_text": "Conflict",
+        "body": {
+          "detail": "User is already registered as trainer"
+        }
+      }
+    },
+
+    "2_trainer_search": {
+      "name": "Ricerca Trainer con Filtri",
+      "endpoint": "GET /api/trainers/search",
+      "description": "Cerca trainer applicando filtri per specializzazione, location e tariffa massima",
+      
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:8080/api/trainers/search?specialization=powerlifting&location=Milano&max_price=40",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "query_parameters": {
+          "specialization": "powerlifting",
+          "location": "Milano",
+          "max_price": 40.0
+        },
+        "body": null
+      },
+      
+      "response": {
+        "status_code": 200,
+        "status_text": "OK",
+        "body": [
+          {
+            "id": 1,
+            "name": "Marco Bianchi",
+            "bio": "Specializzato in powerlifting e allenamento funzionale. Certificato ISSA e NSCA.",
+            "hourly_rate": 35.0,
+            "location": "Milano",
+            "experience_years": 8,
+            "specializations": ["Powerlifting", "Allenamento Funzionale"]
+          },
+          {
+            "id": 3,
+            "name": "Giuseppe Verdi",
+            "bio": "Powerlifter agonista con esperienza in preparazione atletica. Record nazionale categoria -93kg.",
+            "hourly_rate": 40.0,
+            "location": "Milano",
+            "experience_years": 12,
+            "specializations": ["Powerlifting", "Preparazione Atletica"]
+          }
+        ]
+      },
+      
+      "other_examples": {
+        "no_filters": {
+          "url": "http://localhost:8080/api/trainers/search",
+          "description": "Restituisce tutti i trainer disponibili"
+        },
+        "only_location": {
+          "url": "http://localhost:8080/api/trainers/search?location=Roma",
+          "description": "Solo trainer di Roma"
+        },
+        "only_max_price": {
+          "url": "http://localhost:8080/api/trainers/search?max_price=30",
+          "description": "Solo trainer con tariffa <= 30€/h"
+        },
+        "location_and_price": {
+          "url": "http://localhost:8080/api/trainers/search?location=Torino&max_price=35",
+          "description": "Trainer di Torino con tariffa <= 35€/h"
+        }
+      },
+      
+      "validations": [
+        "Tutti i parametri sono opzionali",
+        "I filtri si combinano con logica AND",
+        "La ricerca per location è case-insensitive e supporta partial match",
+        "La ricerca per specialization è exact match (case-insensitive)",
+        "Se nessun trainer soddisfa i criteri, restituisce array vuoto []"
+      ],
+      
+      "empty_result_example": {
+        "status_code": 200,
+        "status_text": "OK",
+        "body": []
+      }
+    },
+
+    "3_session_booking": {
+      "name": "Prenotazione Sessione di Allenamento",
+      "endpoint": "POST /api/sessions",
+      "description": "Prenota una sessione one-to-one con un trainer specificando data, ora e note",
+      
+      "request": {
+        "method": "POST",
+        "url": "http://localhost:8080/api/sessions",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "client_id": 10,
+          "trainer_id": 1,
+          "date": "2026-07-15",
+          "time": "10:00",
+          "notes": "Prima sessione, focus su tecnica di base per squat e deadlift. Ho problemi al ginocchio destro."
+        }
+      },
+      
+      "response": {
+        "status_code": 201,
+        "status_text": "Created",
+        "body": {
+          "id": 123,
+          "client": {
+            "id": 10,
+            "name": "Luca Rossi",
+            "fitness_level": "beginner"
+          },
+          "trainer": {
+            "id": 1,
+            "name": "Marco Bianchi",
+            "location": "Milano",
+            "hourly_rate": 35.0
+          },
+          "date": "2026-07-15",
+          "time": "10:00",
+          "status": "scheduled",
+          "notes": "Prima sessione, focus su tecnica di base per squat e deadlift. Ho problemi al ginocchio destro.",
+          "created_at": "2026-03-07T15:45:00Z",
+          "message": "Sessione prenotata con successo"
+        }
+      },
+      
+      "validations": [
+        "client_id deve esistere nella tabella client",
+        "trainer_id deve esistere nella tabella trainer",
+        "date deve essere nel futuro (>= oggi) e in formato YYYY-MM-DD",
+        "time deve essere in formato HH:MM (00:00 a 23:59)",
+        "Lo slot (trainer + date + time) non deve essere già occupato",
+        "notes è opzionale (max 1000 caratteri)"
+      ],
+      
+      "error_examples": {
+        "client_not_found": {
+          "status_code": 404,
+          "status_text": "Not Found",
+          "body": {
+            "detail": "Client with id 10 does not exist"
+          }
+        },
+        "trainer_not_found": {
+          "status_code": 404,
+          "status_text": "Not Found",
+          "body": {
+            "detail": "Trainer with id 1 does not exist"
+          }
+        },
+        "invalid_date": {
+          "status_code": 400,
+          "status_text": "Bad Request",
+          "body": {
+            "detail": "Date must be in the future (format: YYYY-MM-DD)"
+          }
+        },
+        "invalid_time": {
+          "status_code": 400,
+          "status_text": "Bad Request",
+          "body": {
+            "detail": "Time must be in format HH:MM (00:00 to 23:59)"
+          }
+        },
+        "time_slot_conflict": {
+          "status_code": 409,
+          "status_text": "Conflict",
+          "body": {
+            "detail": "This time slot is already booked for this trainer. Please choose a different time."
+          }
+        }
+      },
+      
+      "business_logic": {
+        "conflict_check": "Prima di creare la sessione, il sistema verifica che lo slot (trainer + date + time) non sia già occupato",
+        "default_status": "Le sessioni vengono create con status='scheduled'",
+        "status_values": ["scheduled", "completed", "cancelled"],
+        "n_to_1_relationship": "Questa è la relazione N:1 richiesta: MOLTE sessioni appartengono a UN cliente e a UN trainer"
+      }
+    }
+  },
+
+  "test_data": {
+    "description": "Dati di esempio disponibili nel sistema per testing",
+    
+    "users": [
+      {
+        "id": 5,
+        "email": "marco.training@email.com",
+        "name": "Marco Bianchi",
+        "role": "trainer"
+      },
+      {
+        "id": 10,
+        "email": "luca.client@email.com",
+        "name": "Luca Rossi",
+        "role": "client"
+      }
+    ],
+    
+    "clients": [
+      {
+        "id": 10,
+        "user_id": 10,
+        "name": "Luca Rossi",
+        "phone": "+39 333 1234567",
+        "fitness_level": "beginner"
+      }
+    ],
+    
+    "trainers": [
+      {
+        "id": 1,
+        "user_id": 5,
+        "name": "Marco Bianchi",
+        "location": "Milano",
+        "hourly_rate": 35.0,
+        "experience_years": 8,
+        "specializations": ["Powerlifting", "Allenamento Funzionale"]
+      },
+      {
+        "id": 3,
+        "user_id": 8,
+        "name": "Giuseppe Verdi",
+        "location": "Milano",
+        "hourly_rate": 40.0,
+        "experience_years": 12,
+        "specializations": ["Powerlifting", "Preparazione Atletica"]
+      }
+    ],
+    
+    "specializations": [
+      {
+        "id": 1,
+        "name": "Powerlifting",
+        "description": "Allenamento per forza massimale: squat, panca, stacco"
+      },
+      {
+        "id": 2,
+        "name": "Allenamento Funzionale",
+        "description": "Training funzionale per movimenti quotidiani"
+      },
+      {
+        "id": 3,
+        "name": "Yoga",
+        "description": "Discipline yoga per flessibilità e mindfulness"
+      },
+      {
+        "id": 4,
+        "name": "Preparazione Atletica",
+        "description": "Preparazione fisica per atleti agonisti"
+      }
+    ],
+    
+    "sessions": [
+      {
+        "id": 123,
+        "client_id": 10,
+        "trainer_id": 1,
+        "date": "2026-07-15",
+        "time": "10:00",
+        "status": "scheduled",
+        "notes": "Prima sessione, focus su tecnica di base"
+      }
+    ]
+  },
+
+  "curl_commands": {
+    "description": "Comandi cURL pronti per testare gli endpoint",
+    
+    "trainer_registration": "curl -X POST http://localhost:8080/api/trainers/register -H 'Content-Type: application/json' -d '{\"user_id\": 5, \"bio\": \"Trainer professionista\", \"hourly_rate\": 35.0, \"location\": \"Milano\", \"experience_years\": 8, \"specialization_ids\": [1, 2]}'",
+    
+    "trainer_search_all": "curl 'http://localhost:8080/api/trainers/search'",
+    
+    "trainer_search_filtered": "curl 'http://localhost:8080/api/trainers/search?specialization=powerlifting&location=Milano&max_price=40'",
+    
+    "session_booking": "curl -X POST http://localhost:8080/api/sessions -H 'Content-Type: application/json' -d '{\"client_id\": 10, \"trainer_id\": 1, \"date\": \"2026-07-15\", \"time\": \"10:00\", \"notes\": \"Prima sessione\"}'"
+  },
+
+  "metadata": {
+    "created_at": "2026-03-07",
+    "version": "1.0.0",
+    "author": "FitConnect Development Team",
+    "purpose": "Esempi JSON validati per i 3 endpoint MVP di FitConnect"
+  }
+}

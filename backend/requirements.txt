@@ -1,4 +1,4 @@
-# FitConnect - Python dependencies (root)
+# FitConnect - Python dependencies (backend)
 
 # Web API
 fastapi==0.109.0
