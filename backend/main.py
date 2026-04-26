@@ -110,6 +110,13 @@ def register(
     
     Ruoli disponibili: client, trainer, admin
     """
+    # Endpoint pubblico: impedisce escalation privilegi tramite payload alterato.
+    if user.role == schemas.UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La registrazione pubblica di account admin non è consentita"
+        )
+
     # Verifica se email esiste già
     existing_user = crud.get_user_by_email(db, email=user.email)
     if existing_user:

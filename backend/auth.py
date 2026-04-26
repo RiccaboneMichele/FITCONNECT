@@ -11,12 +11,13 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import User, Group, Permission
 import os
+import secrets
 from dotenv import load_dotenv
 
 load_dotenv()
 
 # Configurazione sicurezza
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production-VERY-IMPORTANT")
+SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_hex(32))
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 ore
 
@@ -24,7 +25,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 ore
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # OAuth2 scheme per JWT
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
 def _role_value(role) -> str:
@@ -220,7 +221,7 @@ def require_permission(permission_name: str):
         db: Session = Depends(get_db)
     ):
         # Admin hanno tutti i permessi
-        if current_user.is_admin:
+        if current_user.is_admin or _role_value(current_user.role) == "admin":
             return current_user
         
         # Verifica permessi tramite gruppi
