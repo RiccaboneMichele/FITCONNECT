@@ -103,7 +103,7 @@ export default function LoginPage() {
                   onChange={handleChange}
                   required
                   className="input pl-10"
-                  placeholder="••••••••"
+                  placeholder={t('authPasswordPlaceholder')}
                 />
               </div>
             </div>
@@ -133,19 +133,19 @@ export default function LoginPage() {
                 onClick={() => fillDemoCredentials('admin')}
                 className="text-xs btn-secondary py-1.5"
               >
-                Admin
+                {t('authDemoAdmin')}
               </button>
               <button
                 onClick={() => fillDemoCredentials('trainer')}
                 className="text-xs btn-secondary py-1.5"
               >
-                Trainer
+                {t('authDemoTrainer')}
               </button>
               <button
                 onClick={() => fillDemoCredentials('client')}
                 className="text-xs btn-secondary py-1.5"
               >
-                Client
+                {t('authDemoClient')}
               </button>
             </div>
           </div>

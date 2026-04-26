@@ -162,7 +162,7 @@ export default function RegisterPage() {
                   required
                   minLength={6}
                   className="input pl-10"
-                  placeholder="••••••••"
+                  placeholder={t('authPasswordPlaceholder')}
                 />
               </div>
             </div>
@@ -182,7 +182,7 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   required
                   className="input pl-10"
-                  placeholder="••••••••"
+                  placeholder={t('authPasswordPlaceholder')}
                 />
               </div>
             </div>

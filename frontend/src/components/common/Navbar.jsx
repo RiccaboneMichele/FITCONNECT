@@ -151,6 +151,20 @@ export default function Navbar() {
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-gray-200 animate-fade-in">
             <div className="flex flex-col space-y-4">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">{t('language')}</label>
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className="w-full text-sm border border-gray-300 rounded-lg px-2 py-2 bg-white"
+                  aria-label={t('language')}
+                >
+                  {languages.map((lang) => (
+                    <option key={lang.code} value={lang.code}>{lang.label}</option>
+                  ))}
+                </select>
+              </div>
+
               <Link
                 to="/trainers"
                 className="text-gray-700 hover:text-primary-600 font-medium"

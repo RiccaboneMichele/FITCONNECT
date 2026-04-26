@@ -4,8 +4,8 @@ export const languages = [
   { code: 'zh', label: '中文' },
   { code: 'ja', label: '日本語' },
   { code: 'ko', label: '한국어' },
-  { code: 'es-MX', label: 'Espanol (MX)' },
-  { code: 'fr', label: 'Francais' },
+  { code: 'es-MX', label: 'Español (MX)' },
+  { code: 'fr', label: 'Français' },
 ]
 
 const rawTranslations = {
@@ -166,6 +166,7 @@ const rawTranslations = {
     footerPrivacy: 'Privacy Policy',
     footerTerms: 'Termini di Servizio',
     footerBrandText: 'La piattaforma che connette personal trainer professionisti con clienti motivati.',
+    footerLocation: 'Moncalieri, Italia',
 
     infoAboutTitle: 'Chi Siamo',
     infoAboutText: 'FitConnect nasce per rendere semplice e professionale l incontro tra clienti e trainer. Crediamo in allenamenti personalizzati, obiettivi chiari e relazione diretta.',
@@ -192,6 +193,10 @@ const rawTranslations = {
     authPrivacyLabel: 'Privacy Policy',
     authEmailPlaceholder: 'nome@esempio.it',
     authNamePlaceholder: 'Mario Rossi',
+    authPasswordPlaceholder: 'Inserisci la password',
+    authDemoAdmin: 'Admin',
+    authDemoTrainer: 'Trainer',
+    authDemoClient: 'Cliente',
 
     registerTitle: 'Registrati',
     registerSubtitle: 'Crea il tuo account FitConnect',
@@ -544,6 +549,7 @@ const rawTranslations = {
     footerPrivacy: 'Privacy Policy',
     footerTerms: 'Terms of Service',
     footerBrandText: 'The platform connecting professional personal trainers with motivated clients.',
+    footerLocation: 'Moncalieri, Italy',
     infoAboutTitle: 'About Us',
     infoAboutText: 'FitConnect makes the trainer-client relationship simple, direct, and professional.',
     infoDiscoverTitle: 'Discover More',
@@ -569,6 +575,10 @@ const rawTranslations = {
     authPrivacyLabel: 'Privacy Policy',
     authEmailPlaceholder: 'name@example.com',
     authNamePlaceholder: 'John Doe',
+    authPasswordPlaceholder: 'Enter your password',
+    authDemoAdmin: 'Admin',
+    authDemoTrainer: 'Trainer',
+    authDemoClient: 'Client',
 
     registerTitle: 'Register',
     registerSubtitle: 'Create your FitConnect account',

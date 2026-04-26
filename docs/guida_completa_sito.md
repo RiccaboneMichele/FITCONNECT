@@ -1,4 +1,4 @@
-# FitConnect - Documentazione Unica Completa
+# FitConnect - Guida Completa del Sito
 
 ## 1. Obiettivo del progetto
 FitConnect e una piattaforma web che collega clienti e personal trainer.
@@ -17,7 +17,7 @@ Stack principale:
 ## 2. Avvio del sistema (startup end-to-end)
 
 ### 2.1 Avvio con script unico
-Lo script [run.sh](run.sh) fa tutto in sequenza:
+Lo script [run.sh](../run.sh) fa tutto in sequenza:
 1. crea/valida la virtualenv Python (`.venv`)
 2. installa dipendenze backend (`backend/requirements.txt`)
 3. installa dipendenze frontend (`frontend/package.json`)
@@ -30,27 +30,27 @@ URL principali dopo avvio:
 - Frontend: `http://localhost:5173`
 
 ### 2.2 Startup backend
-Nel backend, all'avvio di FastAPI viene eseguito l'evento startup in [backend/main.py](backend/main.py):
+Nel backend, all'avvio di FastAPI viene eseguito l'evento startup in [backend/main.py](../backend/main.py):
 - `init_db()` crea/inizializza schema database
 - `create_sample_data()` inserisce dati demo (utenti e profili iniziali)
 
 Questo rende subito disponibile il login di test (admin/trainer/client) descritto nel root endpoint `/`.
 
 ### 2.3 Bootstrap frontend
-Il frontend parte da [frontend/src/main.jsx](frontend/src/main.jsx):
+Il frontend parte da [frontend/src/main.jsx](../frontend/src/main.jsx):
 - inizializza React Query
 - inizializza provider i18n
 - monta il router
 - monta toaster notifiche
 
-Le rotte sono definite in [frontend/src/App.jsx](frontend/src/App.jsx), con:
+Le rotte sono definite in [frontend/src/App.jsx](../frontend/src/App.jsx), con:
 - route pubbliche
 - route protette (utente autenticato)
 - route admin
 
 ## 3. Flusso applicativo completo (dal primo accesso alle feature)
 
-### 3.1 Utente non autenticato
+## 3.1 Utente non autenticato
 L'utente puo:
 - vedere home, pagina trainer, dettaglio trainer, pagine info
 - registrarsi (`/register`)
@@ -63,17 +63,17 @@ Non puo accedere a:
 - booking
 - area admin
 
-### 3.2 Registrazione e login
+## 3.2 Registrazione e login
 
-#### Registrazione
-Frontend chiama `POST /api/auth/register` (servizio in [frontend/src/services/api.js](frontend/src/services/api.js)).
+### Registrazione
+Frontend chiama `POST /api/auth/register` (servizio in [frontend/src/services/api.js](../frontend/src/services/api.js)).
 Il backend:
 1. valida email univoca
 2. crea utente
 3. se ruolo client/trainer e presenti dati dedicati, crea anche il profilo associato
 4. scrive audit log
 
-#### Login
+### Login
 Frontend invia form-data a `POST /api/auth/login` con `username=email` e `password`.
 Backend:
 1. verifica credenziali
@@ -81,29 +81,29 @@ Backend:
 3. ritorna `access_token` + dati utente
 4. salva audit log login
 
-Zustand store in [frontend/src/store/authStore.js](frontend/src/store/authStore.js):
+Zustand store in [frontend/src/store/authStore.js](../frontend/src/store/authStore.js):
 - salva token in `localStorage`
 - aggiorna stato `isAuthenticated`
 - mantiene sessione persistente
 
-Axios interceptor in [frontend/src/services/api.js](frontend/src/services/api.js):
+Axios interceptor in [frontend/src/services/api.js](../frontend/src/services/api.js):
 - aggiunge automaticamente `Authorization: Bearer <token>`
 - su `401` pulisce sessione e reindirizza a `/login`
 
-### 3.3 Dashboard per ruolo
-In [frontend/src/pages/DashboardPage.jsx](frontend/src/pages/DashboardPage.jsx):
+## 3.3 Dashboard per ruolo
+In [frontend/src/pages/DashboardPage.jsx](../frontend/src/pages/DashboardPage.jsx):
 - `admin` -> redirect a `/admin`
 - `trainer` -> `TrainerDashboard`
 - `client` -> `ClientDashboard`
 
-#### Dashboard Client
-In [frontend/src/components/dashboard/ClientDashboard.jsx](frontend/src/components/dashboard/ClientDashboard.jsx):
+### Dashboard Client
+In [frontend/src/components/dashboard/ClientDashboard.jsx](../frontend/src/components/dashboard/ClientDashboard.jsx):
 - carica sessioni via `GET /api/sessions`
 - mostra sessioni programmate/completate e ore
 - consente di andare alla ricerca trainer
 
-#### Dashboard Trainer
-In [frontend/src/components/dashboard/TrainerDashboard.jsx](frontend/src/components/dashboard/TrainerDashboard.jsx):
+### Dashboard Trainer
+In [frontend/src/components/dashboard/TrainerDashboard.jsx](../frontend/src/components/dashboard/TrainerDashboard.jsx):
 - carica sessioni (`GET /api/sessions`)
 - calcola ricavi da sessioni completate
 - gestisce chat private trainer-client:
@@ -111,8 +111,8 @@ In [frontend/src/components/dashboard/TrainerDashboard.jsx](frontend/src/compone
   - messaggi conversazione: `GET /api/trainers/me/chats/{client_id}`
   - invio messaggio: `POST /api/trainers/me/chats/{client_id}`
 
-#### Dashboard Admin
-In [frontend/src/pages/admin/AdminDashboard.jsx](frontend/src/pages/admin/AdminDashboard.jsx):
+### Dashboard Admin
+In [frontend/src/pages/admin/AdminDashboard.jsx](../frontend/src/pages/admin/AdminDashboard.jsx):
 - statistiche: `GET /api/admin/dashboard`
 - gestione utenti:
   - lista `GET /api/users`
@@ -123,26 +123,26 @@ In [frontend/src/pages/admin/AdminDashboard.jsx](frontend/src/pages/admin/AdminD
   - lista `GET /api/admin/contacts`
   - segna letto `PUT /api/admin/contacts/{contact_id}/read`
 
-### 3.4 Ricerca trainer, dettaglio, booking
+## 3.4 Ricerca trainer, dettaglio, booking
 
-#### Elenco trainer (pubblico)
+### Elenco trainer (pubblico)
 Pagina trainers usa `GET /api/trainers` con filtri opzionali (`location`, `specialization`, `max_price`).
 
-#### Dettaglio trainer
+### Dettaglio trainer
 Pagina dettaglio usa `GET /api/trainers/{trainer_id}`.
 Da questa pagina il client puo:
 - aprire chat con trainer
 - andare a prenotazione sessione
 
-#### Prenotazione sessione
-In [frontend/src/pages/BookingPage.jsx](frontend/src/pages/BookingPage.jsx):
+### Prenotazione sessione
+In [frontend/src/pages/BookingPage.jsx](../frontend/src/pages/BookingPage.jsx):
 1. carica trainer (`GET /api/trainers/{id}`)
 2. carica profilo client (`GET /api/clients/profile/me`)
 3. invia prenotazione (`POST /api/sessions`)
 
 Il backend controlla conflitti orari trainer; se slot occupato ritorna `409 Conflict`.
 
-### 3.5 Chat (feature reale con persistenza backend)
+## 3.5 Chat (feature reale con persistenza backend)
 Esistono 2 modalita principali:
 
 1. Chat trainer specifico dal dettaglio trainer
@@ -159,8 +159,8 @@ Regole ruoli (backend):
 - trainer puo leggere/scrivere solo chat proprie
 - admin puo accedere con parametri richiesti
 
-### 3.6 Report (segnalazioni)
-Nel frontend esiste una UI report in [frontend/src/pages/TrainerDetailPage.jsx](frontend/src/pages/TrainerDetailPage.jsx):
+## 3.6 Report (segnalazioni)
+Nel frontend esiste una UI report in [frontend/src/pages/TrainerDetailPage.jsx](../frontend/src/pages/TrainerDetailPage.jsx):
 - modal con motivo e dettagli
 - submit gestito localmente con `alert`
 
@@ -168,7 +168,7 @@ Importante: nel backend non esiste un endpoint dedicato ai report utente/trainer
 Quindi al momento il report e una funzione UI mock (non persistita a DB).
 
 ## 4. Modello permessi e sicurezza
-Controlli lato backend in [backend/auth.py](backend/auth.py) + dependency in [backend/main.py](backend/main.py):
+Controlli lato backend in [backend/auth.py](../backend/auth.py) + dependency in [backend/main.py](../backend/main.py):
 - `get_current_user`: richiede token valido
 - `require_role([...])`: vincolo sui ruoli
 - `require_admin`: accesso admin
@@ -182,7 +182,7 @@ Pattern usato:
 ## 5. API complete per metodo HTTP
 Base path API: `/api`
 
-### 5.1 GET
+## 5.1 GET
 - `/` (info app)
 - `/api/health`
 - `/api/auth/me`
@@ -204,7 +204,7 @@ Base path API: `/api`
 - `/api/admin/contacts`
 - `/api/admin/groups`
 
-### 5.2 POST
+## 5.2 POST
 - `/api/auth/register`
 - `/api/auth/login`
 - `/api/users`
@@ -216,22 +216,22 @@ Base path API: `/api`
 - `/api/specializations`
 - `/api/contacts`
 
-### 5.3 PUT
+## 5.3 PUT
 - `/api/users/{user_id}`
 - `/api/clients/{client_id}`
 - `/api/trainers/{trainer_id}`
 - `/api/sessions/{session_id}`
 - `/api/admin/contacts/{contact_id}/read`
 
-### 5.4 PATCH
+## 5.4 PATCH
 - `/api/users/{user_id}/status`
 
-### 5.5 DELETE
+## 5.5 DELETE
 - `/api/users/{user_id}`
 - `/api/sessions/{session_id}`
 
 ## 6. Mappa pagine frontend
-Route principali in [frontend/src/App.jsx](frontend/src/App.jsx):
+Route principali in [frontend/src/App.jsx](../frontend/src/App.jsx):
 - Pubbliche: `/`, `/login`, `/register`, `/trainers`, `/trainers/:id`, `/info/*`
 - Protette: `/dashboard`, `/profile`, `/sessions`, `/booking/:trainerId`
 - Admin: `/admin`, `/admin/users`, `/admin/clients`, `/admin/contacts`
@@ -248,38 +248,9 @@ Mock/parziale:
 - report/segnalazioni da trainer detail (solo UI, niente endpoint dedicato)
 - pagine sessioni/profilo potrebbero essere ancora minimali lato UI
 
-## 8. Esempi rapidi cURL
-
-### Login
-```bash
-curl -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: multipart/form-data" \
-  -F "username=admin@fitconnect.com" \
-  -F "password=admin123"
-```
-
-### Ricerca trainer
-```bash
-curl "http://localhost:8080/api/trainers?location=Torino&max_price=45"
-```
-
-### Prenotazione sessione
-```bash
-curl -X POST http://localhost:8080/api/sessions \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "client_id": 1,
-    "trainer_id": 2,
-    "date": "2026-04-10",
-    "time": "17:30",
-    "notes": "Sessione prova"
-  }'
-```
-
-## 9. Riferimenti utili
-- API backend: [backend/main.py](backend/main.py)
-- Servizi frontend API: [frontend/src/services/api.js](frontend/src/services/api.js)
-- Routing frontend: [frontend/src/App.jsx](frontend/src/App.jsx)
-- Avvio locale: [run.sh](run.sh)
-- Guida estesa (backup): [docs/guida_completa_sito.md](docs/guida_completa_sito.md)
+## 8. Riferimenti utili
+- API backend: [backend/main.py](../backend/main.py)
+- Servizi frontend API: [frontend/src/services/api.js](../frontend/src/services/api.js)
+- Routing frontend: [frontend/src/App.jsx](../frontend/src/App.jsx)
+- Avvio locale: [run.sh](../run.sh)
+- Documentazione API breve esistente: [api_documentation.md](../api_documentation.md)
